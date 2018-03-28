@@ -24,6 +24,9 @@ func run() {
 	if err != nil {
 		panic(err)
 	}
+
+	win.SetSmooth(true)
+
 	pic, err := loadPicture("hikingGopher.png")
 	if err != nil {
 		panic(err)
@@ -31,10 +34,16 @@ func run() {
 
 	sprite := pixel.NewSprite(pic, pic.Bounds())
 
-	win.Clear(colornames.Skyblue)
-	sprite.Draw(win, pixel.IM.Moved(win.Bounds().Center()))
+	angle := 0.0
 
 	for !win.Closed() {
+		angle += 0.05
+		win.Clear(colornames.Firebrick)
+
+		mat := pixel.IM
+		mat = mat.Rotated(pixel.ZV, angle)
+		mat = mat.Moved(win.Bounds().Center())
+		sprite.Draw(win, mat)
 		win.Update()
 	}
 }
