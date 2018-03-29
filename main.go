@@ -25,25 +25,29 @@ func run() {
 		panic(err)
 	}
 
-	win.SetSmooth(true)
-
-	pic, err := loadPicture("hikingGopher.png")
+	pic, err := loadPicture("images/sprite-test.png")
 	if err != nil {
 		panic(err)
 	}
 
 	sprite := pixel.NewSprite(pic, pic.Bounds())
-
-	angle := 0.0
+	v := pixel.V(50, 50)
 
 	for !win.Closed() {
-		angle += 0.05
-		win.Clear(colornames.Firebrick)
+		win.Clear(colornames.Violet)
+		sprite.Draw(win, pixel.IM.Moved(v))
 
-		mat := pixel.IM
-		mat = mat.Rotated(pixel.ZV, angle)
-		mat = mat.Moved(win.Bounds().Center())
-		sprite.Draw(win, mat)
+		ctrl := pixel.ZV
+
+		if win.Pressed(pixelgl.KeyRight) {
+			ctrl.X++
+		}
+
+		if win.Pressed(pixelgl.KeyLeft) {
+			ctrl.X--
+		}
+
+		v = ctrl.Add(v)
 		win.Update()
 	}
 }
