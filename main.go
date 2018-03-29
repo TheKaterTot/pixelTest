@@ -47,6 +47,14 @@ func run() {
 			ctrl.X--
 		}
 
+		if win.Pressed(pixelgl.KeyUp) {
+			ctrl.Y++
+		}
+
+		if win.Pressed(pixelgl.KeyDown) {
+			ctrl.Y--
+		}
+
 		v = ctrl.Add(v)
 		win.Update()
 	}
