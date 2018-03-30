@@ -10,7 +10,14 @@ import (
 	"golang.org/x/image/colornames"
 )
 
+var pos pixel.Vec
+
+func setup() {
+	pos = pixel.V(50, 50)
+}
+
 func main() {
+	setup()
 	pixelgl.Run(run)
 }
 
@@ -31,31 +38,30 @@ func run() {
 	}
 
 	sprite := pixel.NewSprite(pic, pic.Bounds())
-	v := pixel.V(50, 50)
 
 	for !win.Closed() {
 		win.Clear(colornames.Violet)
-		sprite.Draw(win, pixel.IM.Moved(v))
+		sprite.Draw(win, pixel.IM.Moved(pos))
 
 		ctrl := pixel.ZV
 
-		if win.Pressed(pixelgl.KeyRight) {
+		if win.Pressed(pixelgl.KeyRight) && pos.X < 974 {
 			ctrl.X++
 		}
 
-		if win.Pressed(pixelgl.KeyLeft) {
+		if win.Pressed(pixelgl.KeyLeft) && pos.X > 50 {
 			ctrl.X--
 		}
 
-		if win.Pressed(pixelgl.KeyUp) {
+		if win.Pressed(pixelgl.KeyUp) && pos.Y < 714 {
 			ctrl.Y++
 		}
 
-		if win.Pressed(pixelgl.KeyDown) {
+		if win.Pressed(pixelgl.KeyDown) && pos.Y > 50 {
 			ctrl.Y--
 		}
 
-		v = ctrl.Add(v)
+		pos = ctrl.Add(pos)
 		win.Update()
 	}
 }
