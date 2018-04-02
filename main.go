@@ -11,9 +11,19 @@ import (
 )
 
 var pos pixel.Vec
+var sprite *pixel.Sprite
+var padding float64
 
 func setup() {
-	pos = pixel.V(50, 50)
+	pic, err := loadPicture("images/sprite-test.png")
+	if err != nil {
+		panic(err)
+	}
+
+	sprite = pixel.NewSprite(pic, pic.Bounds())
+	x, y := sprite.Frame().Size().XY()
+	padding = 25
+	pos = pixel.V(x/2+padding, y/2+padding)
 }
 
 func main() {
@@ -32,32 +42,25 @@ func run() {
 		panic(err)
 	}
 
-	pic, err := loadPicture("images/sprite-test.png")
-	if err != nil {
-		panic(err)
-	}
-
-	sprite := pixel.NewSprite(pic, pic.Bounds())
-
 	for !win.Closed() {
 		win.Clear(colornames.Violet)
 		sprite.Draw(win, pixel.IM.Moved(pos))
 
 		ctrl := pixel.ZV
 
-		if win.Pressed(pixelgl.KeyRight) && pos.X < 974 {
+		if win.Pressed(pixelgl.KeyRight) && pos.X < (win.Bounds().W()-padding) {
 			ctrl.X++
 		}
 
-		if win.Pressed(pixelgl.KeyLeft) && pos.X > 50 {
+		if win.Pressed(pixelgl.KeyLeft) && pos.X > padding {
 			ctrl.X--
 		}
 
-		if win.Pressed(pixelgl.KeyUp) && pos.Y < 714 {
+		if win.Pressed(pixelgl.KeyUp) && pos.Y < (win.Bounds().H()-padding) {
 			ctrl.Y++
 		}
 
-		if win.Pressed(pixelgl.KeyDown) && pos.Y > 50 {
+		if win.Pressed(pixelgl.KeyDown) && pos.Y > padding {
 			ctrl.Y--
 		}
 
