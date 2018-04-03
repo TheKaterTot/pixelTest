@@ -10,61 +10,76 @@ import (
 	"golang.org/x/image/colornames"
 )
 
-var pos pixel.Vec
-var sprite *pixel.Sprite
-var padding float64
+var player *Entity
 
-func setup() {
-	pic, err := loadPicture("images/sprite-test.png")
+const padding float64 = 25
+
+var cfg pixelgl.WindowConfig = pixelgl.WindowConfig{
+	Title:  "You Better Work",
+	Bounds: pixel.R(0, 0, 1024, 768),
+	VSync:  true,
+}
+
+type Entity struct {
+	Pos    pixel.Vec
+	Sprite *pixel.Sprite
+}
+
+func newEntityFromSprite(imgPath string) (*Entity, error) {
+	pic, err := loadPicture(imgPath)
+	if err != nil {
+		return nil, err
+	}
+
+	sprite := pixel.NewSprite(pic, pic.Bounds())
+	x, y := sprite.Frame().Size().XY()
+	pos := pixel.V(x/2+padding, y/2+padding)
+	return &Entity{Pos: pos, Sprite: sprite}, nil
+}
+
+func init() {
+	var err error
+	player, err = newEntityFromSprite("./images/sprite-test.png")
 	if err != nil {
 		panic(err)
 	}
-
-	sprite = pixel.NewSprite(pic, pic.Bounds())
-	x, y := sprite.Frame().Size().XY()
-	padding = 25
-	pos = pixel.V(x/2+padding, y/2+padding)
 }
 
 func main() {
-	setup()
 	pixelgl.Run(run)
 }
 
 func run() {
-	cfg := pixelgl.WindowConfig{
-		Title:  "You Better Work",
-		Bounds: pixel.R(0, 0, 1024, 768),
-		VSync:  true,
-	}
 	win, err := pixelgl.NewWindow(cfg)
 	if err != nil {
 		panic(err)
 	}
 
+	speed := 3.0
+
 	for !win.Closed() {
 		win.Clear(colornames.Violet)
-		sprite.Draw(win, pixel.IM.Moved(pos))
+		player.Sprite.Draw(win, pixel.IM.Moved(player.Pos))
 
 		ctrl := pixel.ZV
 
-		if win.Pressed(pixelgl.KeyRight) && pos.X < (win.Bounds().W()-padding) {
-			ctrl.X++
+		if win.Pressed(pixelgl.KeyRight) && player.Pos.X < (win.Bounds().W()-padding) {
+			ctrl.X += speed
 		}
 
-		if win.Pressed(pixelgl.KeyLeft) && pos.X > padding {
-			ctrl.X--
+		if win.Pressed(pixelgl.KeyLeft) && player.Pos.X > padding {
+			ctrl.X -= speed
 		}
 
-		if win.Pressed(pixelgl.KeyUp) && pos.Y < (win.Bounds().H()-padding) {
-			ctrl.Y++
+		if win.Pressed(pixelgl.KeyUp) && player.Pos.Y < (win.Bounds().H()-padding) {
+			ctrl.Y += speed
 		}
 
-		if win.Pressed(pixelgl.KeyDown) && pos.Y > padding {
-			ctrl.Y--
+		if win.Pressed(pixelgl.KeyDown) && player.Pos.Y > padding {
+			ctrl.Y -= speed
 		}
 
-		pos = ctrl.Add(pos)
+		player.Pos = ctrl.Add(player.Pos)
 		win.Update()
 	}
 }
