@@ -3,6 +3,7 @@ package main
 import (
 	"image"
 	_ "image/png"
+	"math/rand"
 	"os"
 
 	"github.com/faiface/pixel"
@@ -11,6 +12,7 @@ import (
 )
 
 var player *Entity
+var enemy *Entity
 
 const padding float64 = 25
 
@@ -37,6 +39,25 @@ func newEntityFromSprite(imgPath string) (*Entity, error) {
 	return &Entity{Pos: pos, Sprite: sprite}, nil
 }
 
+func newEnemyEntityFromSprite(imgPath string, x float64, y float64) (*Entity, error) {
+	pic, err := loadPicture(imgPath)
+	if err != nil {
+		return nil, err
+	}
+
+	sprite := pixel.NewSprite(pic, pic.Bounds())
+	pos := pixel.V(x, y)
+	return &Entity{Pos: pos, Sprite: sprite}, nil
+}
+
+func getCoordinates(llx, lly, trx, try float64) (float64, float64) {
+	a := trx - llx
+	b := try - lly
+	x := rand.Float64()*a + llx
+	y := rand.Float64()*b + lly
+	return x, y
+}
+
 func init() {
 	var err error
 	player, err = newEntityFromSprite("./images/sprite-test.png")
@@ -55,11 +76,26 @@ func run() {
 		panic(err)
 	}
 
+	var enemies []*Entity
+	for i := 0; i < 4; i++ {
+		x, y := getCoordinates(padding+win.Bounds().W(), padding, win.Bounds().W()*2-padding, win.Bounds().H()-padding)
+		enemy, err = newEnemyEntityFromSprite("./images/enemy.png", x, y)
+		if err != nil {
+			panic(err)
+		}
+		enemies = append(enemies, enemy)
+	}
 	speed := 3.0
+	enemySpeed := 0.8
 
 	for !win.Closed() {
 		win.Clear(colornames.Violet)
 		player.Sprite.Draw(win, pixel.IM.Moved(player.Pos))
+
+		for _, enemy := range enemies {
+			enemy.Sprite.Draw(win, pixel.IM.Moved(enemy.Pos))
+			enemy.Pos.X -= enemySpeed
+		}
 
 		ctrl := pixel.ZV
 
