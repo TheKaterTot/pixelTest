@@ -40,6 +40,14 @@ func newEntityFromSprite(imgPath string) (*Entity, error) {
 	return &Entity{Pos: pos, Sprite: sprite}, nil
 }
 
+func placenewSprite() {
+	var err error
+	player, err = newEntityFromSprite("./images/sprite-test.png")
+	if err != nil {
+		panic(err)
+	}
+}
+
 func newEnemyEntityFromSprite(imgPath string, x float64, y float64) (*Entity, error) {
 	pic, err := loadPicture(imgPath)
 	if err != nil {
@@ -96,11 +104,7 @@ func overlap(sprite *Entity, sprite2 *Entity) bool {
 }
 
 func init() {
-	var err error
-	player, err = newEntityFromSprite("./images/sprite-test.png")
-	if err != nil {
-		panic(err)
-	}
+	placenewSprite()
 }
 
 func main() {
