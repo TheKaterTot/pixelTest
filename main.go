@@ -100,6 +100,7 @@ func overlap(sprite *Entity, sprite2 *Entity) bool {
 	if intersection.W() == 0 && intersection.H() == 0 {
 		return false
 	}
+	placenewSprite()
 	return true
 }
 
