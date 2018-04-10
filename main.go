@@ -25,6 +25,7 @@ var cfg pixelgl.WindowConfig = pixelgl.WindowConfig{
 type Entity struct {
 	Pos    pixel.Vec
 	Sprite *pixel.Sprite
+	Bounds pixel.Rect
 }
 
 func newEntityFromSprite(imgPath string) (*Entity, error) {
@@ -50,12 +51,48 @@ func newEnemyEntityFromSprite(imgPath string, x float64, y float64) (*Entity, er
 	return &Entity{Pos: pos, Sprite: sprite}, nil
 }
 
+func placeNewEnemy(win *pixelgl.Window) (*Entity, error) {
+	x, y := getCoordinates(padding+win.Bounds().W(), padding, win.Bounds().W()*2-padding, win.Bounds().H()-padding)
+	enemy, err := newEnemyEntityFromSprite("./images/enemy.png", x, y)
+	if err != nil {
+		panic(err)
+	}
+	return enemy, nil
+}
+
 func getCoordinates(llx, lly, trx, try float64) (float64, float64) {
 	a := trx - llx
 	b := try - lly
 	x := rand.Float64()*a + llx
 	y := rand.Float64()*b + lly
 	return x, y
+}
+
+func isOffWorld(x float64) bool {
+	if x < 0 {
+		return true
+	}
+	return false
+}
+
+func validateEnemies(enemies []*Entity) []*Entity {
+	var newList []*Entity
+	for _, enemy := range enemies {
+		if !isOffWorld(enemy.Pos.X) && !overlap(player, enemy) {
+			newList = append(newList, enemy)
+		}
+	}
+	return newList
+}
+
+func overlap(sprite *Entity, sprite2 *Entity) bool {
+	sprite.Bounds = pixel.R(sprite.Pos.X, sprite.Pos.Y, sprite.Pos.X+sprite.Sprite.Frame().W(), sprite.Pos.Y+sprite.Sprite.Frame().H())
+	sprite2.Bounds = pixel.R(sprite2.Pos.X, sprite2.Pos.Y, sprite.Pos.X+sprite2.Sprite.Frame().W(), sprite2.Pos.Y+sprite2.Sprite.Frame().H())
+	intersection := sprite.Bounds.Intersect(sprite2.Bounds)
+	if intersection.W() == 0 && intersection.H() == 0 {
+		return false
+	}
+	return true
 }
 
 func init() {
@@ -75,16 +112,15 @@ func run() {
 	if err != nil {
 		panic(err)
 	}
-
 	var enemies []*Entity
 	for i := 0; i < 4; i++ {
-		x, y := getCoordinates(padding+win.Bounds().W(), padding, win.Bounds().W()*2-padding, win.Bounds().H()-padding)
-		enemy, err = newEnemyEntityFromSprite("./images/enemy.png", x, y)
+		enemy, err := placeNewEnemy(win)
+		enemies = append(enemies, enemy)
 		if err != nil {
 			panic(err)
 		}
-		enemies = append(enemies, enemy)
 	}
+
 	speed := 3.0
 	enemySpeed := 0.8
 
@@ -95,6 +131,12 @@ func run() {
 		for _, enemy := range enemies {
 			enemy.Sprite.Draw(win, pixel.IM.Moved(enemy.Pos))
 			enemy.Pos.X -= enemySpeed
+		}
+
+		enemies = validateEnemies(enemies)
+		if len(enemies) < 4 {
+			newEnemy, _ := placeNewEnemy(win)
+			enemies = append(enemies, newEnemy)
 		}
 
 		ctrl := pixel.ZV
