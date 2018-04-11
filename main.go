@@ -179,6 +179,7 @@ func run() {
 		basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 		basicTxt := text.New(pixel.V(100, 500), basicAtlas)
 		fmt.Fprintln(basicTxt, "Press Space to Start")
+		enemies = []*Entity{}
 		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 4))
 		win.Update()
 		if win.JustPressed(pixelgl.KeySpace) {
