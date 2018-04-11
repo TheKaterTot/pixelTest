@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	_ "image/png"
 	"math/rand"
@@ -8,11 +9,14 @@ import (
 
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
+	"github.com/faiface/pixel/text"
 	"golang.org/x/image/colornames"
+	"golang.org/x/image/font/basicfont"
 )
 
 var player *Entity
 var enemy *Entity
+var running bool
 
 const padding float64 = 25
 
@@ -28,6 +32,19 @@ type Entity struct {
 	Bounds pixel.Rect
 }
 
+func getInitialPos(sprite *pixel.Sprite) pixel.Vec {
+	x, y := sprite.Frame().Size().XY()
+	return pixel.V(x/2+padding, y/2+padding)
+}
+
+func getBounds(sprite *Entity) pixel.Rect {
+	return pixel.R(
+		sprite.Pos.X,
+		sprite.Pos.Y,
+		sprite.Pos.X+sprite.Sprite.Frame().W(),
+		sprite.Pos.Y+sprite.Sprite.Frame().H())
+}
+
 func newEntityFromSprite(imgPath string) (*Entity, error) {
 	pic, err := loadPicture(imgPath)
 	if err != nil {
@@ -35,8 +52,7 @@ func newEntityFromSprite(imgPath string) (*Entity, error) {
 	}
 
 	sprite := pixel.NewSprite(pic, pic.Bounds())
-	x, y := sprite.Frame().Size().XY()
-	pos := pixel.V(x/2+padding, y/2+padding)
+	pos := getInitialPos(sprite)
 	return &Entity{Pos: pos, Sprite: sprite}, nil
 }
 
@@ -83,7 +99,7 @@ func isOffWorld(x float64) bool {
 	return false
 }
 
-func validateEnemies(enemies []*Entity) []*Entity {
+func filterDeadEnemies(enemies []*Entity) []*Entity {
 	var newList []*Entity
 	for _, enemy := range enemies {
 		if !isOffWorld(enemy.Pos.X) && !overlap(player, enemy) {
@@ -94,17 +110,17 @@ func validateEnemies(enemies []*Entity) []*Entity {
 }
 
 func overlap(sprite *Entity, sprite2 *Entity) bool {
-	sprite.Bounds = pixel.R(sprite.Pos.X, sprite.Pos.Y, sprite.Pos.X+sprite.Sprite.Frame().W(), sprite.Pos.Y+sprite.Sprite.Frame().H())
-	sprite2.Bounds = pixel.R(sprite2.Pos.X, sprite2.Pos.Y, sprite.Pos.X+sprite2.Sprite.Frame().W(), sprite2.Pos.Y+sprite2.Sprite.Frame().H())
+	sprite.Bounds = getBounds(sprite)
+	sprite2.Bounds = getBounds(sprite2)
 	intersection := sprite.Bounds.Intersect(sprite2.Bounds)
 	if intersection.W() == 0 && intersection.H() == 0 {
 		return false
 	}
-	placenewSprite()
 	return true
 }
 
 func init() {
+	running = true
 	placenewSprite()
 }
 
@@ -117,6 +133,7 @@ func run() {
 	if err != nil {
 		panic(err)
 	}
+
 	var enemies []*Entity
 	for i := 0; i < 4; i++ {
 		enemy, err := placeNewEnemy(win)
@@ -126,45 +143,72 @@ func run() {
 		}
 	}
 
-	speed := 3.0
-	enemySpeed := 0.8
-
 	for !win.Closed() {
-		win.Clear(colornames.Violet)
-		player.Sprite.Draw(win, pixel.IM.Moved(player.Pos))
-
-		for _, enemy := range enemies {
-			enemy.Sprite.Draw(win, pixel.IM.Moved(enemy.Pos))
-			enemy.Pos.X -= enemySpeed
+		for running {
+			for _, enemy := range enemies {
+				if overlap(player, enemy) {
+					running = false
+					break
+				}
+			}
+			if !running {
+				break
+			}
+			update(win, player, enemies)
+			win.Clear(colornames.Violet)
+			player.Sprite.Draw(win, pixel.IM.Moved(player.Pos))
+			for _, enemy := range enemies {
+				enemy.Sprite.Draw(win, pixel.IM.Moved(enemy.Pos))
+			}
+			win.Update()
 		}
 
-		enemies = validateEnemies(enemies)
-		if len(enemies) < 4 {
-			newEnemy, _ := placeNewEnemy(win)
-			enemies = append(enemies, newEnemy)
-		}
-
-		ctrl := pixel.ZV
-
-		if win.Pressed(pixelgl.KeyRight) && player.Pos.X < (win.Bounds().W()-padding) {
-			ctrl.X += speed
-		}
-
-		if win.Pressed(pixelgl.KeyLeft) && player.Pos.X > padding {
-			ctrl.X -= speed
-		}
-
-		if win.Pressed(pixelgl.KeyUp) && player.Pos.Y < (win.Bounds().H()-padding) {
-			ctrl.Y += speed
-		}
-
-		if win.Pressed(pixelgl.KeyDown) && player.Pos.Y > padding {
-			ctrl.Y -= speed
-		}
-
-		player.Pos = ctrl.Add(player.Pos)
+		win.Clear(colornames.Black)
+		basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
+		basicTxt := text.New(pixel.V(100, 500), basicAtlas)
+		fmt.Fprintln(basicTxt, "Press Space to Start")
+		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 4))
 		win.Update()
+		if win.JustPressed(pixelgl.KeySpace) {
+			running = true
+			placenewSprite()
+		}
 	}
+}
+
+func update(win *pixelgl.Window, player *Entity, enemies []*Entity) {
+	speed := 3.0
+	enemySpeed := 1.0
+	enemies = filterDeadEnemies(enemies)
+	if len(enemies) < 4 {
+		newEnemy, _ := placeNewEnemy(win)
+		enemies = append(enemies, newEnemy)
+	}
+
+	for _, enemy := range enemies {
+		enemy.Pos.X -= enemySpeed
+	}
+
+	ctrl := pixel.ZV
+
+	if win.Pressed(pixelgl.KeyRight) && player.Pos.X < (win.Bounds().W()-padding) {
+		ctrl.X += speed
+	}
+
+	if win.Pressed(pixelgl.KeyLeft) && player.Pos.X > padding {
+		ctrl.X -= speed
+	}
+
+	if win.Pressed(pixelgl.KeyUp) && player.Pos.Y < (win.Bounds().H()-padding) {
+		ctrl.Y += speed
+	}
+
+	if win.Pressed(pixelgl.KeyDown) && player.Pos.Y > padding {
+		ctrl.Y -= speed
+	}
+
+	player.Pos = ctrl.Add(player.Pos)
+
 }
 
 func loadPicture(path string) (pixel.Picture, error) {
