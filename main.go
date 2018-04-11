@@ -102,7 +102,7 @@ func isOffWorld(x float64) bool {
 func filterDeadEnemies(enemies []*Entity) []*Entity {
 	var newList []*Entity
 	for _, enemy := range enemies {
-		if !isOffWorld(enemy.Pos.X) && !overlap(player, enemy) {
+		if !isOffWorld(enemy.Pos.X) {
 			newList = append(newList, enemy)
 		}
 	}
@@ -155,8 +155,20 @@ func run() {
 				break
 			}
 			update(win, player, enemies)
+			enemySpeed := 1.0
+			enemies = filterDeadEnemies(enemies)
+			if len(enemies) < 4 {
+				newEnemy, _ := placeNewEnemy(win)
+				enemies = append(enemies, newEnemy)
+			}
+
+			for _, enemy := range enemies {
+				enemy.Pos.X -= enemySpeed
+			}
+
 			win.Clear(colornames.Violet)
 			player.Sprite.Draw(win, pixel.IM.Moved(player.Pos))
+
 			for _, enemy := range enemies {
 				enemy.Sprite.Draw(win, pixel.IM.Moved(enemy.Pos))
 			}
@@ -178,16 +190,6 @@ func run() {
 
 func update(win *pixelgl.Window, player *Entity, enemies []*Entity) {
 	speed := 3.0
-	enemySpeed := 1.0
-	enemies = filterDeadEnemies(enemies)
-	if len(enemies) < 4 {
-		newEnemy, _ := placeNewEnemy(win)
-		enemies = append(enemies, newEnemy)
-	}
-
-	for _, enemy := range enemies {
-		enemy.Pos.X -= enemySpeed
-	}
 
 	ctrl := pixel.ZV
 
