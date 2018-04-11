@@ -144,7 +144,7 @@ func run() {
 	}
 
 	for !win.Closed() {
-		for running {
+		for running && !win.Closed() {
 			for _, enemy := range enemies {
 				if overlap(player, enemy) {
 					running = false
