@@ -16,6 +16,7 @@ import (
 
 var player *Entity
 var enemy *Entity
+var missile *Entity
 var running bool
 
 const padding float64 = 25
@@ -56,14 +57,6 @@ func newEntityFromSprite(imgPath string) (*Entity, error) {
 	return &Entity{Pos: pos, Sprite: sprite}, nil
 }
 
-func placenewSprite() {
-	var err error
-	player, err = newEntityFromSprite("./images/sprite-test.png")
-	if err != nil {
-		panic(err)
-	}
-}
-
 func newEnemyEntityFromSprite(imgPath string, x float64, y float64) (*Entity, error) {
 	pic, err := loadPicture(imgPath)
 	if err != nil {
@@ -75,6 +68,25 @@ func newEnemyEntityFromSprite(imgPath string, x float64, y float64) (*Entity, er
 	return &Entity{Pos: pos, Sprite: sprite}, nil
 }
 
+func newPlayerMissileFromSprite(imgPath string) (*Entity, error) {
+	pic, err := loadPicture(imgPath)
+	if err != nil {
+		return nil, err
+	}
+
+	sprite := pixel.NewSprite(pic, pic.Bounds())
+	pos := player.Pos
+	return &Entity{Pos: pos, Sprite: sprite}, nil
+}
+
+func placenewSprite() {
+	var err error
+	player, err = newEntityFromSprite("./images/sprite-test.png")
+	if err != nil {
+		panic(err)
+	}
+}
+
 func placeNewEnemy(win *pixelgl.Window) (*Entity, error) {
 	x, y := getCoordinates(padding+win.Bounds().W(), padding, win.Bounds().W()*2-padding, win.Bounds().H()-padding)
 	enemy, err := newEnemyEntityFromSprite("./images/enemy.png", x, y)
@@ -82,6 +94,14 @@ func placeNewEnemy(win *pixelgl.Window) (*Entity, error) {
 		panic(err)
 	}
 	return enemy, nil
+}
+
+func placeNewPlayerMissile(win *pixelgl.Window) (*Entity, error) {
+	missile, err := newPlayerMissileFromSprite("./images/missile.png")
+	if err != nil {
+		panic(err)
+	}
+	return missile, nil
 }
 
 func getCoordinates(llx, lly, trx, try float64) (float64, float64) {
@@ -135,6 +155,8 @@ func run() {
 	}
 
 	var enemies []*Entity
+	var missiles []*Entity
+
 	for i := 0; i < 4; i++ {
 		enemy, err := placeNewEnemy(win)
 		enemies = append(enemies, enemy)
@@ -145,6 +167,7 @@ func run() {
 
 	for !win.Closed() {
 		for running && !win.Closed() {
+
 			for _, enemy := range enemies {
 				if overlap(player, enemy) {
 					running = false
@@ -155,6 +178,16 @@ func run() {
 				break
 			}
 			update(win, player, enemies)
+			missileSpeed := 3.5
+			for _, missile := range missiles {
+				missile.Pos.X += missileSpeed
+			}
+
+			if win.JustPressed(pixelgl.KeySpace) {
+				missile, _ := placeNewPlayerMissile(win)
+				missiles = append(missiles, missile)
+			}
+
 			enemySpeed := 1.0
 			enemies = filterDeadEnemies(enemies)
 			if len(enemies) < 4 {
@@ -172,17 +205,20 @@ func run() {
 			for _, enemy := range enemies {
 				enemy.Sprite.Draw(win, pixel.IM.Moved(enemy.Pos))
 			}
+			for _, missile := range missiles {
+				missile.Sprite.Draw(win, pixel.IM.Moved(missile.Pos))
+			}
 			win.Update()
 		}
 
 		win.Clear(colornames.Black)
 		basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 		basicTxt := text.New(pixel.V(100, 500), basicAtlas)
-		fmt.Fprintln(basicTxt, "Press Space to Start")
+		fmt.Fprintln(basicTxt, "Press Enter to Start")
 		enemies = []*Entity{}
 		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 4))
 		win.Update()
-		if win.JustPressed(pixelgl.KeySpace) {
+		if win.JustPressed(pixelgl.KeyEnter) {
 			running = true
 			placenewSprite()
 		}
@@ -191,7 +227,6 @@ func run() {
 
 func update(win *pixelgl.Window, player *Entity, enemies []*Entity) {
 	speed := 3.0
-
 	ctrl := pixel.ZV
 
 	if win.Pressed(pixelgl.KeyRight) && player.Pos.X < (win.Bounds().W()-padding) {
