@@ -215,6 +215,16 @@ func (g *game) update(win *pixelgl.Window) {
 	win.Update()
 }
 
+func (g *game) gameOver(win *pixelgl.Window) {
+	win.Clear(colornames.Black)
+	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
+	basicTxt := text.New(pixel.V(100, 500), basicAtlas)
+	fmt.Fprintln(basicTxt, "GAME OVER")
+	fmt.Fprintln(basicTxt, "Press Enter to Start")
+	basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 4))
+	win.Update()
+}
+
 func main() {
 	pixelgl.Run(run)
 }
@@ -236,18 +246,11 @@ func run() {
 			g.draw(win)
 			g.update(win)
 		}
-
-		win.Clear(colornames.Black)
-		basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
-		basicTxt := text.New(pixel.V(100, 500), basicAtlas)
-		fmt.Fprintln(basicTxt, "Press Enter to Start")
-		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 4))
-		win.Update()
+		g.gameOver(win)
 		if win.JustPressed(pixelgl.KeyEnter) {
 			running = true
 			g = newGame()
 		}
-		// }
 	}
 }
 
