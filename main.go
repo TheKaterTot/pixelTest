@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	_ "image/png"
 	"math/rand"
@@ -9,7 +10,9 @@ import (
 
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
+	"github.com/faiface/pixel/text"
 	"golang.org/x/image/colornames"
+	"golang.org/x/image/font/basicfont"
 )
 
 // /var player *Entity
@@ -101,6 +104,12 @@ func getCoordinates(llx, lly, trx, try float64) (float64, float64) {
 	return x, y
 }
 
+func getTextCoordinates(win *pixelgl.Window) pixel.Vec {
+	x := padding
+	y := win.Bounds().H() - padding
+	return pixel.V(x, y)
+}
+
 func isEnemyOffWorld(x float64) bool {
 	if x < 0 {
 		return true
@@ -188,6 +197,14 @@ func (g *game) update(win *pixelgl.Window) {
 	for _, enemy := range g.enemies {
 		enemy.Pos.X -= enemySpeed
 	}
+
+	txtvec := getTextCoordinates(win)
+
+	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
+	basicTxt := text.New(txtvec, basicAtlas)
+	basicTxt.Color = colornames.Black
+	fmt.Fprintf(basicTxt, "Score: %d", g.score)
+	basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 2))
 
 	win.Update()
 }
