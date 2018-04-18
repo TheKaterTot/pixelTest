@@ -62,6 +62,10 @@ func newEntityFromSprite(imgPath string) (*Entity, error) {
 	return &Entity{Pos: pos, Sprite: sprite, Scale: scale}, nil
 }
 
+func placenewSprite() (*Entity, error) {
+	return newEntityFromSprite("./images/player.png")
+}
+
 func newEnemyEntityFromSprite(imgPath string, x float64, y float64) (*Entity, error) {
 	pic, err := loadPicture(imgPath)
 	if err != nil {
@@ -71,10 +75,6 @@ func newEnemyEntityFromSprite(imgPath string, x float64, y float64) (*Entity, er
 	sprite := pixel.NewSprite(pic, pic.Bounds())
 	pos := pixel.V(x, y)
 	return &Entity{Pos: pos, Sprite: sprite, Scale: 0.065}, nil
-}
-
-func placenewSprite() (*Entity, error) {
-	return newEntityFromSprite("./images/player.png")
 }
 
 func placeNewEnemy(win *pixelgl.Window) (*Entity, error) {
@@ -191,6 +191,12 @@ func (g *game) draw(win *pixelgl.Window) {
 }
 
 func (g *game) update(win *pixelgl.Window) {
+	for _, enemy := range g.enemies {
+		if overlap(g.player, enemy) {
+			running = false
+			break
+		}
+	}
 	g.enemies = filterDeadEnemies(g.enemies)
 	makeEnemies(g, win, 4-len(g.enemies))
 	enemySpeed := 1.5
@@ -223,22 +229,24 @@ func run() {
 
 	for !win.Closed() {
 		for running && !win.Closed() {
+			if !running {
+				break
+			}
 			g.input(win)
 			g.draw(win)
 			g.update(win)
 		}
 
-		// 	win.Clear(colornames.Black)
-		// 	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
-		// 	basicTxt := text.New(pixel.V(100, 500), basicAtlas)
-		// 	fmt.Fprintln(basicTxt, "Press Enter to Start")
-		// 	enemies = []*Entity{}
-		// 	basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 4))
-		// 	win.Update()
-		// 	if win.JustPressed(pixelgl.KeyEnter) {
-		// 		running = true
-		// 		placenewSprite()
-		// 	}
+		win.Clear(colornames.Black)
+		basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
+		basicTxt := text.New(pixel.V(100, 500), basicAtlas)
+		fmt.Fprintln(basicTxt, "Press Enter to Start")
+		basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 4))
+		win.Update()
+		if win.JustPressed(pixelgl.KeyEnter) {
+			running = true
+			g = newGame()
+		}
 		// }
 	}
 }
