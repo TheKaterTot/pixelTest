@@ -15,9 +15,6 @@ import (
 	"golang.org/x/image/font/basicfont"
 )
 
-// /var player *Entity
-// var enemy *Entity
-// var missile *Entity
 var running bool
 
 const padding float64 = 25
@@ -84,6 +81,22 @@ func placeNewEnemy(win *pixelgl.Window) (*Entity, error) {
 		panic(err)
 	}
 	return enemy, nil
+}
+
+func newPlayerMissileFromSprite(imgPath string, player *Entity) (*Entity, error) {
+	scale := 0.045
+	pic, err := loadPicture(imgPath)
+	if err != nil {
+		return nil, err
+	}
+
+	sprite := pixel.NewSprite(pic, pic.Bounds())
+	pos := player.Pos
+	return &Entity{Pos: pos, Sprite: sprite, Scale: scale}, nil
+}
+
+func playerFire(player *Entity) (*Entity, error) {
+	return newPlayerMissileFromSprite("./images/missile.png", player)
 }
 
 func makeEnemies(g *game, win *pixelgl.Window, number int) {
@@ -180,6 +193,11 @@ func (g *game) input(win *pixelgl.Window) {
 
 	g.player.Pos = ctrl.Add(g.player.Pos)
 
+	if win.JustPressed(pixelgl.KeySpace) {
+		missile, _ := playerFire(g.player)
+		g.missiles = append(g.missiles, missile)
+	}
+
 }
 
 func (g *game) draw(win *pixelgl.Window) {
@@ -187,6 +205,9 @@ func (g *game) draw(win *pixelgl.Window) {
 	g.player.Sprite.Draw(win, pixel.IM.Scaled(pixel.ZV, g.player.Scale).Moved(g.player.Pos))
 	for _, enemy := range g.enemies {
 		enemy.Sprite.Draw(win, pixel.IM.Scaled(pixel.ZV, enemy.Scale).Moved(enemy.Pos))
+	}
+	for _, missile := range g.missiles {
+		missile.Sprite.Draw(win, pixel.IM.Scaled(pixel.ZV, missile.Scale).Moved(missile.Pos))
 	}
 }
 
@@ -202,6 +223,10 @@ func (g *game) update(win *pixelgl.Window) {
 	enemySpeed := 1.5
 	for _, enemy := range g.enemies {
 		enemy.Pos.X -= enemySpeed
+	}
+	missileSpeed := 2.5
+	for _, missile := range g.missiles {
+		missile.Pos.X += missileSpeed
 	}
 
 	txtvec := getTextCoordinates(win)
