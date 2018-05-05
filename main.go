@@ -84,7 +84,7 @@ func placeNewEnemy(win *pixelgl.Window) (*Entity, error) {
 }
 
 func newPlayerMissileFromSprite(imgPath string, player *Entity) (*Entity, error) {
-	scale := 0.045
+	scale := 0.035
 	pic, err := loadPicture(imgPath)
 	if err != nil {
 		return nil, err
@@ -130,13 +130,31 @@ func isEnemyOffWorld(x float64) bool {
 	return false
 }
 
-func filterDeadEnemies(enemies []*Entity) []*Entity {
-	for i, enemy := range enemies {
-		if isEnemyOffWorld(enemy.Pos.X) {
-			enemies = append(enemies[:i], enemies[i+1:]...)
+func isMissileOffWorld(x float64) bool {
+	if x > 1024 {
+		return true
+	}
+	return false
+}
+
+func filterDeadEnemies(g *game) []*Entity {
+	enemies := []*Entity{}
+	for _, enemy := range g.enemies {
+		if !isEnemyOffWorld(enemy.Pos.X) && !anyOverlap(enemy, g.missiles) {
+			enemies = append(enemies, enemy)
 		}
 	}
 	return enemies
+}
+
+func filterDeadMissiles(g *game) []*Entity {
+	missiles := []*Entity{}
+	for _, missile := range g.missiles {
+		if !isMissileOffWorld(missile.Pos.X) && !anyOverlap(missile, g.enemies) {
+			missiles = append(missiles, missile)
+		}
+	}
+	return missiles
 }
 
 func overlap(sprite *Entity, sprite2 *Entity) bool {
@@ -145,6 +163,15 @@ func overlap(sprite *Entity, sprite2 *Entity) bool {
 		return false
 	}
 	return true
+}
+
+func anyOverlap(entity *Entity, others []*Entity) bool {
+	for _, other := range others {
+		if overlap(other, entity) {
+			return true
+		}
+	}
+	return false
 }
 
 func init() {
@@ -218,7 +245,9 @@ func (g *game) update(win *pixelgl.Window) {
 			break
 		}
 	}
-	g.enemies = filterDeadEnemies(g.enemies)
+	filteredEnemies := filterDeadEnemies(g)
+	g.missiles = filterDeadMissiles(g)
+	g.enemies = filteredEnemies
 	makeEnemies(g, win, 4-len(g.enemies))
 	enemySpeed := 1.5
 	for _, enemy := range g.enemies {
