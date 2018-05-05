@@ -137,14 +137,18 @@ func isMissileOffWorld(x float64) bool {
 	return false
 }
 
-func filterDeadEnemies(g *game) []*Entity {
+func filterDeadEnemies(g *game) ([]*Entity, int64) {
 	enemies := []*Entity{}
+	hits := int64(0)
 	for _, enemy := range g.enemies {
 		if !isEnemyOffWorld(enemy.Pos.X) && !anyOverlap(enemy, g.missiles) {
 			enemies = append(enemies, enemy)
 		}
+		if anyOverlap(enemy, g.missiles) {
+			hits += 1
+		}
 	}
-	return enemies
+	return enemies, hits
 }
 
 func filterDeadMissiles(g *game) []*Entity {
@@ -245,9 +249,10 @@ func (g *game) update(win *pixelgl.Window) {
 			break
 		}
 	}
-	filteredEnemies := filterDeadEnemies(g)
+	filteredEnemies, hits := filterDeadEnemies(g)
 	g.missiles = filterDeadMissiles(g)
 	g.enemies = filteredEnemies
+	g.score += hits
 	makeEnemies(g, win, 4-len(g.enemies))
 	enemySpeed := 1.5
 	for _, enemy := range g.enemies {
