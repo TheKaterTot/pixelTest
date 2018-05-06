@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
@@ -16,10 +17,12 @@ type gameState struct {
 }
 
 type game struct {
-	score   int64
-	player  *entity
-	current gameState
-	next    gameState
+	score        int64
+	player       *entity
+	enemyMissles []*entity
+	current      gameState
+	next         gameState
+	running      bool
 }
 
 func newGameState() gameState {
@@ -33,10 +36,12 @@ func newGame() *game {
 	player, _ := placenewSprite()
 
 	return &game{
-		score:   int64(0),
-		player:  player,
-		current: newGameState(),
-		next:    newGameState(),
+		score:        int64(0),
+		player:       player,
+		enemyMissles: []*entity{},
+		current:      newGameState(),
+		next:         newGameState(),
+		running:      true,
 	}
 }
 
@@ -62,15 +67,39 @@ func (g *game) updateEnemies() {
 
 	for _, enemy := range g.current.enemies {
 		enemy.Pos.X -= enemySpeed
+		roll := rand.Int63n(10000)
+		if roll <= 25 {
+			missile, err := newMissile(enemy.Pos)
+			if err != nil {
+				panic(err)
+			}
+			g.enemyMissles = append(g.enemyMissles, missile)
+		}
 	}
 }
 
 func (g *game) updateMissiles() {
-	missileSpeed := 2.5
+	missileSpeed := 3.5
 
 	for _, missile := range g.current.missiles {
 		missile.Pos.X += missileSpeed
 	}
+
+	for _, missile := range g.enemyMissles {
+		missile.Pos.X -= missileSpeed * 1.5
+	}
+}
+
+func (g *game) gameStart(win *pixelgl.Window) {
+	win.Clear(colornames.Mediumaquamarine)
+	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
+	basicTxt := text.New(pixel.V(100, 500), basicAtlas)
+	basicTxt.Color = colornames.Black
+	fmt.Fprintln(basicTxt, "Pirates have arrived in your harbor.")
+	fmt.Fprintln(basicTxt, "Keep out enemy ships and avoid missiles.")
+	fmt.Fprintln(basicTxt, "Press Enter to Start")
+	basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 3))
+	win.Update()
 }
 
 func (g *game) gameOver(win *pixelgl.Window) {
@@ -78,7 +107,8 @@ func (g *game) gameOver(win *pixelgl.Window) {
 	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 	basicTxt := text.New(pixel.V(100, 500), basicAtlas)
 	fmt.Fprintln(basicTxt, "GAME OVER")
-	fmt.Fprintln(basicTxt, "Press Enter to Start")
+	fmt.Fprintln(basicTxt, "You have failed your people.")
+	fmt.Fprintln(basicTxt, "Press Enter to Start Again")
 	basicTxt.Draw(win, pixel.IM.Scaled(basicTxt.Orig, 4))
 	win.Update()
 }
@@ -96,7 +126,13 @@ func (g *game) displayScore(win *pixelgl.Window) {
 func (g *game) checkPlayer() {
 	for _, enemy := range g.current.enemies {
 		if overlap(g.player, enemy) {
-			running = false
+			g.running = false
+			break
+		}
+	}
+	for _, missile := range g.enemyMissles {
+		if overlap(g.player, missile) {
+			g.running = false
 			break
 		}
 	}
@@ -126,6 +162,15 @@ func (g *game) filterDeadMissiles() []*entity {
 	return missiles
 }
 
+func (g *game) checkHarbor() {
+	for _, enemy := range g.current.enemies {
+		if isEnemyOffWorld(enemy.Pos.X) {
+			g.running = false
+			break
+		}
+	}
+}
+
 func (g *game) draw(win *pixelgl.Window) {
 	win.Clear(colornames.Cornflowerblue)
 	g.player.Sprite.Draw(win, pixel.IM.Scaled(pixel.ZV, g.player.Scale).Moved(g.player.Pos))
@@ -135,10 +180,14 @@ func (g *game) draw(win *pixelgl.Window) {
 	for _, missile := range g.current.missiles {
 		missile.Sprite.Draw(win, pixel.IM.Scaled(pixel.ZV, missile.Scale).Moved(missile.Pos))
 	}
+	for _, missile := range g.enemyMissles {
+		missile.Sprite.Draw(win, pixel.IM.Scaled(pixel.ZV, missile.Scale).Moved(missile.Pos))
+	}
 }
 
 func (g *game) update(win *pixelgl.Window) {
 	g.checkPlayer()
+	g.checkHarbor()
 	var hits int64
 	g.next.enemies, hits = g.filterDeadEnemies()
 	g.next.missiles = g.filterDeadMissiles()

@@ -2,13 +2,13 @@ package main
 
 import (
 	_ "image/png"
+	"math/rand"
 	"runtime"
+	"time"
 
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
 )
-
-var running bool
 
 const padding float64 = 25
 
@@ -56,20 +56,25 @@ func placenewSprite() (*entity, error) {
 	return newEntityFromSprite("./images/player.png")
 }
 
-func newPlayerMissileFromSprite(imgPath string, player *entity) (*entity, error) {
+func newMissile(pos pixel.Vec) (*entity, error) {
+	imgPath := "./images/missile.png"
 	scale := 0.035
+
 	pic, err := loadPicture(imgPath)
 	if err != nil {
 		return nil, err
 	}
 
 	sprite := pixel.NewSprite(pic, pic.Bounds())
-	pos := player.Pos
 	return &entity{Pos: pos, Sprite: sprite, Scale: scale}, nil
 }
 
+func newPlayerMissle(player *entity) (*entity, error) {
+	return newMissile(player.Pos)
+}
+
 func playerFire(player *entity) (*entity, error) {
-	return newPlayerMissileFromSprite("./images/missile.png", player)
+	return newPlayerMissle(player)
 }
 
 func isMissileOffWorld(x float64) bool {
@@ -81,7 +86,7 @@ func isMissileOffWorld(x float64) bool {
 
 func init() {
 	runtime.LockOSThread()
-	running = true
+	rand.Seed(time.Now().Unix())
 }
 
 func main() {
@@ -96,9 +101,18 @@ func run() {
 		panic(err)
 	}
 
+	g.running = false
+	for !win.Closed() && !g.running {
+		g.gameStart(win)
+		if win.JustPressed(pixelgl.KeyEnter) {
+			g.running = true
+			break
+		}
+	}
+
 	for !win.Closed() {
-		for running && !win.Closed() {
-			if !running {
+		for g.running && !win.Closed() {
+			if !g.running {
 				break
 			}
 			g.input(win)
@@ -107,7 +121,7 @@ func run() {
 		}
 		g.gameOver(win)
 		if win.JustPressed(pixelgl.KeyEnter) {
-			running = true
+			g.running = true
 			g = newGame()
 		}
 	}
